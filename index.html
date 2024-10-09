@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drag and Drop HTML Element Editor</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      #source-container {
+        display: flex;
+        padding: 10px;
+        margin-bottom: 20px;
+        border: 2px solid #ccc;
+        background-color: #f9f9f9;
+      }
+      .source-item {
+        width: 100px;
+        height: 100px;
+        background-color: #e0e0e0;
+        text-align: center;
+        margin-right: 10px;
+        cursor: grab;
+        border: 1px solid #ccc;
+        position: relative; /* Position relative for child elements */
+      }
+      .visible {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+      }
+      .source-item .hidden {
+        display: none; /* Hidden by default */
+      }
+      #editor-container {
+        width: 100%;
+        height: 500px;
+        border: 2px dashed #aaa;
+        background-color: #f5f5f5;
+        position: relative;
+      }
+      .editor-item {
+        position: absolute;
+        padding: 10px;
+        background-color: #ffffff;
+        border: 1px solid #ccc;
+      }
+      .editor-item.selected {
+        border-color: blue;
+      }
+      .header {
+        background-color: #ccc;
+        padding: 5px;
+        cursor: move; /* Change cursor to indicate dragging */
+        user-select: none; /* Prevent text selection */
+        position: absolute;
+        top: -10px;
+        height: 10px;
+        left: 0;
+        display: none;
+        opacity: 0.5;
+        width: 100%;
+      }
+      .resize-handle {
+        width: 5px;
+        height: 100%; /* Full height of the element */
+        background-color: #ff0000; /* Red for visibility */
+        position: absolute;
+        right: -10px; /* Position it to the right of the element */
+        top: 0;
+        cursor: ew-resize; /* Change cursor to indicate resizing */
+        display: none;
+      }
+      #controls {
+        margin-top: 10px;
+      }
+      .editor-item.selected .header,
+      .editor-item.selected .resize-handle {
+        display: block !important;
+      }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body>
+    <h1>Drag and Drop HTML Element Editor</h1>
+
+    <!-- Source container: Holds draggable elements -->
+    <div id="source-container">
+      <div class="source-item" draggable="true" id="source1">
+        <div class="visible">Element 1</div>
+        <div class="hidden">Hidden Content 1</div>
+      </div>
+      <div class="source-item" draggable="true" id="source2">
+        <div class="visible">Element 2</div>
+        <div class="hidden">Hidden Content 2</div>
+      </div>
+      <div class="source-item" draggable="true" id="source3">
+        <div class="visible">Element 3</div>
+        <div class="hidden">Hidden Content 3</div>
+      </div>
+    </div>
+
+    <!-- Editor container: Drop elements here -->
+    <div id="editor-container"></div>
+
+    <!-- Controls: Delete and Z-Index buttons -->
+    <div id="controls">
+      <button id="deleteElement">Delete Selected Element</button>
+      <button id="moveUp">Move Up</button>
+      <button id="moveDown">Move Down</button>
+    </div>
+
+    <script>
+      $(document).ready(function () {
+        let selectedElement = null;
+        let isMoving = false; // To track if we are moving an element
+        let isResizing = false; // Track resizing
+        let offsetX, offsetY; // Offset between mouse position and the top-left corner of the element
+
+        // Handle drag and drop logic
+        $(".source-item").on("dragstart", function (e) {
+          e.originalEvent.dataTransfer.setData("text/plain", this.id);
+        });
+
+        $("#editor-container").on("dragover", function (e) {
+          e.preventDefault(); // Allow dropping
+        });
+
+        $("#editor-container").on("drop", function (e) {
+          e.preventDefault();
+
+          const draggedItemId =
+            e.originalEvent.dataTransfer.getData("text/plain");
+          const draggedElement = $("#" + draggedItemId);
+
+          // Get the hidden content
+          const hiddenContent = draggedElement.find(".hidden").clone();
+
+          // Create a new editor item with the hidden content
+          const clone = $('<div class="editor-item"></div>');
+          clone.append(hiddenContent);
+          clone
+            .removeClass("source-item")
+            .addClass("editor-item")
+            .removeAttr("draggable");
+
+          // Create a header for the draggable element
+          const header = $('<div class="header">Drag Me</div>');
+          clone.prepend(header); // Add the header at the top
+
+          // Create a resize handle for horizontal resizing
+          const resizeHandle = $('<div class="resize-handle"></div>');
+          clone.append(resizeHandle); // Add the resize handle to the element
+
+          // Calculate initial position (top in px, left in %)
+          const leftPercent =
+            ((e.originalEvent.clientX - $(this).offset().left) /
+              $(this).width()) *
+            100;
+          const topPx = e.originalEvent.clientY - $(this).offset().top;
+
+          clone.css({
+            left: leftPercent + "%",
+            top: topPx + "px",
+            right: "auto", // Initialize right property
+            height: "auto", // Set height to auto
+          });
+
+          // Set the initial right value based on the dropped position
+          const containerRight = $(this).outerWidth();
+          const rightPx = containerRight - e.originalEvent.clientX;
+
+          clone.css("right", rightPx + "px");
+
+          // Add event listeners for selecting
+          clone.on("click", selectElement);
+          header.on("mousedown", startMove); // Start moving only from the header
+          resizeHandle.on("mousedown", startResize); // Start resizing from the handle
+
+          $(this).append(clone);
+        });
+
+        // Select and highlight the dropped element
+        function selectElement() {
+          if (selectedElement) {
+            selectedElement.removeClass("selected");
+          }
+          selectedElement = $(this);
+          selectedElement.addClass("selected");
+        }
+
+        // Start moving the selected element on mousedown
+        function startMove(e) {
+          isMoving = true;
+          offsetX = e.clientX - selectedElement.offset().left;
+          offsetY = e.clientY - selectedElement.offset().top;
+
+          // Add mousemove and mouseup listeners to move the element
+          $(document).on("mousemove", moveElement);
+          $(document).on("mouseup", stopMove);
+        }
+
+        // Start resizing the selected element on mousedown (from the resize handle)
+        function startResize(e) {
+          e.preventDefault(); // Prevent default behavior
+          isResizing = true; // Set resizing to true
+
+          // Add mousemove and mouseup listeners for resizing
+          $(document).on("mousemove", function (e) {
+            if (isResizing && selectedElement) {
+              const newWidth = e.clientX - selectedElement.offset().left; // Calculate new width
+              selectedElement.css("width", newWidth + "px"); // Set new width
+              const containerRight = $("#editor-container").outerWidth();
+              const rightPx =
+                containerRight - (selectedElement.offset().left + newWidth);
+              selectedElement.css("right", rightPx + "px"); // Adjust right property
+            }
+          });
+          $(document).on("mouseup", stopResize);
+        }
+
+        // Move the selected element with the mouse
+        function moveElement(e) {
+          if (!selectedElement) return;
+
+          // Calculate new position
+          const newXPercent =
+            ((e.clientX - offsetX - $("#editor-container").offset().left) /
+              $("#editor-container").width()) *
+            100;
+          const newYpx =
+            e.clientY - offsetY - $("#editor-container").offset().top;
+
+          selectedElement.css({
+            left: newXPercent + "%",
+            top: newYpx + "px", // Keep top as px
+          });
+        }
+
+        // Stop moving the element when mouse is released
+        function stopMove() {
+          isMoving = false;
+          $(document).off("mousemove", moveElement);
+          $(document).off("mouseup", stopMove);
+        }
+
+        // Stop resizing when mouse is released
+        function stopResize() {
+          isResizing = false;
+          $(document).off("mousemove"); // Unbind mousemove
+          $(document).off("mouseup", stopResize); // Unbind mouseup
+        }
+
+        // Delete the selected element
+        $("#deleteElement").on("click", function () {
+          if (selectedElement) {
+            selectedElement.remove();
+            selectedElement = null;
+          }
+        });
+
+        // Move Z-Index Up
+        $("#moveUp").on("click", function () {
+          if (selectedElement) {
+            let zIndex = parseInt(selectedElement.css("z-index")) || 1;
+            selectedElement.css("z-index", zIndex + 1);
+          }
+        });
+
+        // Move Z-Index Down
+        $("#moveDown").on("click", function () {
+          if (selectedElement) {
+            let zIndex = parseInt(selectedElement.css("z-index")) || 1;
+            selectedElement.css("z-index", zIndex - 1);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
