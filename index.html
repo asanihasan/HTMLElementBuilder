@@ -42,6 +42,7 @@
         position: relative;
         overflow-y: scroll;
         overflow-x: hidden;
+        resize: horizontal;
       }
       .editor-item {
         position: absolute;
@@ -162,7 +163,6 @@
             .removeClass("source-item")
             .addClass("editor-item")
             .removeAttr("draggable");
-          clone.css("z-index", 1); // Set the z-index of the clone
           // Create a header for the draggable element
           const header = $('<div class="header">Drag Me</div>');
           clone.prepend(header); // Add the header at the top
@@ -295,17 +295,15 @@
 
         // Move Z-Index Up
         $("#moveUp").on("click", function () {
-          if (selectedElement) {
-            let zIndex = parseInt(selectedElement.css("z-index")) || 1;
-            selectedElement.css("z-index", zIndex + 1);
+          if (selectedElement && selectedElement.next().length) {
+            selectedElement.insertAfter(selectedElement.next());
           }
         });
 
-        // Move Z-Index Down
+        // Move Down button: Move the selected element after the next sibling
         $("#moveDown").on("click", function () {
-          if (selectedElement) {
-            let zIndex = parseInt(selectedElement.css("z-index")) || 1;
-            selectedElement.css("z-index", zIndex - 1);
+          if (selectedElement && selectedElement.prev().length) {
+            selectedElement.insertBefore(selectedElement.prev());
           }
         });
       });
