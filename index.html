@@ -40,16 +40,14 @@
         border: 2px dashed #aaa;
         background-color: #f5f5f5;
         position: relative;
-        overflow: scroll;
+        overflow-y: scroll;
+        overflow-x: hidden;
       }
       .editor-item {
         position: absolute;
-        padding: 10px;
-        background-color: #ffffff;
-        border: 1px solid #ccc;
       }
       .editor-item.selected {
-        border-color: blue;
+        border: 1px dashed blue;
       }
       .header {
         background-color: #ccc;
@@ -57,17 +55,16 @@
         cursor: move; /* Change cursor to indicate dragging */
         user-select: none; /* Prevent text selection */
         position: absolute;
-        top: -10px;
+        top: -20px;
         height: 10px;
         left: 0;
         display: none;
-        opacity: 0.5;
         width: 100%;
       }
       .resize-handle {
         width: 5px;
         height: 100%; /* Full height of the element */
-        background-color: #ff0000; /* Red for visibility */
+        background-color: cyan; /* Red for visibility */
         position: absolute;
         right: -10px; /* Position it to the right of the element */
         top: 0;
@@ -142,6 +139,12 @@
           e.preventDefault(); // Allow dropping
         });
 
+        $("#editor-container").click(function (e) {
+          if (e.target == this) {
+            selectedElement.removeClass("selected");
+          }
+        });
+
         $("#editor-container").on("drop", function (e) {
           e.preventDefault();
 
@@ -177,10 +180,9 @@
 
           clone.css({
             left: leftPercent + "%",
-            top: "z-indexpx",
             top: topPx + "px",
-            right: "auto", // Initialize right property
             height: "auto", // Set height to auto
+            width: "30%",
           });
 
           // Set the initial right value based on the dropped position
@@ -222,17 +224,23 @@
           e.preventDefault(); // Prevent default behavior
           isResizing = true; // Set resizing to true
 
+          // Get the container width in pixels
+          const containerWidth = $("#editor-container").width();
+
           // Add mousemove and mouseup listeners for resizing
           $(document).on("mousemove", function (e) {
             if (isResizing && selectedElement) {
-              const newWidth = e.clientX - selectedElement.offset().left; // Calculate new width
-              selectedElement.css("width", newWidth + "px"); // Set new width
-              const containerRight = $("#editor-container").outerWidth();
-              const rightPx =
-                containerRight - (selectedElement.offset().left + newWidth);
-              selectedElement.css("right", rightPx + "px"); // Adjust right property
+              // Calculate new width in percentage
+              const newWidthPx = e.clientX - selectedElement.offset().left;
+              const newWidthPercent = (newWidthPx / containerWidth) * 100;
+
+              // Update width property using percentage
+              selectedElement.css({
+                width: newWidthPercent + "%", // Adjust width in percentage
+              });
             }
           });
+
           $(document).on("mouseup", stopResize);
         }
 
@@ -240,16 +248,25 @@
         function moveElement(e) {
           if (!selectedElement) return;
 
-          // Calculate new position
-          const newXPercent =
+          // Get the editor container width in pixels
+          const containerWidth = $("#editor-container").width();
+
+          // Calculate new left position in percentage
+          const newLeftPercent =
             ((e.clientX - offsetX - $("#editor-container").offset().left) /
-              $("#editor-container").width()) *
+              containerWidth) *
             100;
-          const newYpx =
+
+          // Calculate new top position in px
+          let newYpx =
             e.clientY - offsetY - $("#editor-container").offset().top;
 
+          // Update the selected element's position using percentage for left, and maintain width
+          if (newYpx < 10) {
+            newYpx = 10;
+          }
           selectedElement.css({
-            left: newXPercent + "%",
+            left: newLeftPercent + "%", // Update left position in percentage
             top: newYpx + "px", // Keep top as px
           });
         }
