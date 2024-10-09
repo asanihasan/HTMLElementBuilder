@@ -40,6 +40,7 @@
         border: 2px dashed #aaa;
         background-color: #f5f5f5;
         position: relative;
+        overflow: scroll;
       }
       .editor-item {
         position: absolute;
@@ -98,7 +99,20 @@
       </div>
       <div class="source-item" draggable="true" id="source3">
         <div class="visible">Element 3</div>
-        <div class="hidden">Hidden Content 3</div>
+        <div class="hidden">
+          Lorem ipsum dolor sit amet consectetur adipisicing elit. Aliquam
+          dignissimos ipsam delectus pariatur, officia eos possimus adipisci
+          voluptatum minus dolor ab reprehenderit ipsa excepturi porro, quam
+          quos eligendi veritatis voluptate reiciendis at neque. Nisi velit
+          distinctio nam dolorem quibusdam dolores provident quisquam odit
+          blanditiis iure aliquam illo voluptatibus sapiente commodi, itaque
+          sunt repellendus perspiciatis cumque? Nulla blanditiis est
+          consequuntur et quo ipsa culpa voluptas tempora! Accusantium,
+          consequatur labore! Vero voluptates, nulla assumenda quibusdam ipsum
+          voluptatum ad labore quod unde beatae odit similique, laborum nam
+          harum voluptate quasi magnam delectus molestiae nostrum quos hic
+          mollitia commodi ipsam! Sint magni modi labore.
+        </div>
       </div>
     </div>
 
@@ -145,7 +159,7 @@
             .removeClass("source-item")
             .addClass("editor-item")
             .removeAttr("draggable");
-
+          clone.css("z-index", 1); // Set the z-index of the clone
           // Create a header for the draggable element
           const header = $('<div class="header">Drag Me</div>');
           clone.prepend(header); // Add the header at the top
@@ -163,6 +177,7 @@
 
           clone.css({
             left: leftPercent + "%",
+            top: "z-indexpx",
             top: topPx + "px",
             right: "auto", // Initialize right property
             height: "auto", // Set height to auto
