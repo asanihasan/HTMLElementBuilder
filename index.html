@@ -35,6 +35,8 @@
         display: none; /* Hidden by default */
       }
       #editor-container {
+        max-width: 100%;
+        min-width: 300px;
         width: 100%;
         height: 500px;
         border: 2px dashed #aaa;
@@ -130,6 +132,20 @@
         let isMoving = false; // To track if we are moving an element
         let isResizing = false; // Track resizing
         let offsetX, offsetY; // Offset between mouse position and the top-left corner of the element
+        let containerWidth;
+        
+        // get container width
+        const resizeObserver = new ResizeObserver((entries) => {
+          for (let entry of entries) {
+            containerWidth = entry.contentRect.width
+            $("#editor-container").children().each(function(i,e){
+              const widthRatio = parseFloat($(this).attr('data-wr'))
+              const tops = widthRatio/containerWidth;
+              $(this).css('top', `${tops}px`);
+            })
+          }
+        });
+        resizeObserver.observe($("#editor-container")[0]);
 
         // Handle drag and drop logic
         $(".source-item").on("dragstart", function (e) {
@@ -142,7 +158,9 @@
 
         $("#editor-container").click(function (e) {
           if (e.target == this) {
-            selectedElement.removeClass("selected");
+            if(selectedElement != null){
+              selectedElement.removeClass("selected");
+            }
           }
         });
 
@@ -185,6 +203,9 @@
             width: "30%",
           });
 
+          let widthRatio = topPx*containerWidth;
+          clone.attr('data-wr',widthRatio)
+
           // Set the initial right value based on the dropped position
           const containerRight = $(this).outerWidth();
           const rightPx = containerRight - e.originalEvent.clientX;
@@ -194,10 +215,15 @@
           // Add event listeners for selecting
           clone.on("click", selectElement);
           header.on("mousedown", startMove); // Start moving only from the header
+          header.on("dblclick", subeditor); // Start moving only from the header
           resizeHandle.on("mousedown", startResize); // Start resizing from the handle
 
           $(this).append(clone);
         });
+
+        function subeditor(e){
+          console.log("oke")
+        }
 
         // Select and highlight the dropped element
         function selectElement() {
@@ -259,7 +285,7 @@
 
           // Calculate new top position in px
           let newYpx =
-            e.clientY - offsetY - $("#editor-container").offset().top;
+            e.clientY - offsetY - $("#editor-container").offset().top + $("#editor-container").scrollTop();
 
           // Update the selected element's position using percentage for left, and maintain width
           if (newYpx < 10) {
@@ -273,6 +299,11 @@
 
         // Stop moving the element when mouse is released
         function stopMove() {
+          if(selectedElement != null){
+            let tops = parseFloat(selectedElement.css('top'))
+            let widthRatio = tops*containerWidth;
+            selectedElement.attr('data-wr',widthRatio)
+          }
           isMoving = false;
           $(document).off("mousemove", moveElement);
           $(document).off("mouseup", stopMove);
